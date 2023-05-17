@@ -1,0 +1,52 @@
+POST http://localhost:8081/api/cart
+Content-Type: application/json
+
+{
+  "title": "Laptop",
+  "quantity": 1
+}
+
+###
+
+PATCH http://localhost:8081/api/cart/1
+Content-Type: application/json
+
+{
+  "quantity": 5
+}
+
+###
+
+DELETE http://localhost:8081/api/cart
+
+###
+
+GET http://localhost:8081/todos
+
+###
+
+GET http://localhost:8081/todos/3
+
+###
+
+POST http://localhost:8081/todos
+Content-Type: application/json
+
+{
+  "id": 123,
+  "task": "Make a wish",
+  "checked": false
+}
+
+###
+
+PATCH http://localhost:8081/todos/1
+Content-Type: application/json
+
+{
+  "checked": false
+}
+
+###
+
+DELETE http://localhost:8081/todos/2
