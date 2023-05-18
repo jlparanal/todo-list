@@ -33,7 +33,7 @@ POST http://localhost:8081/todos
 Content-Type: application/json
 
 {
-  "id": 123,
+  "_id": 123,
   "task": "Make a wish",
   "checked": false
 }

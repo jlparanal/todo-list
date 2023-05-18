@@ -1,81 +1,87 @@
 import express from 'express';
 import { z } from 'zod';
+import { todosCollection } from '../db.js'
+import { ObjectId } from 'mongodb';
 
 const router = express.Router();
 
 const TodoSchema = z.object({
-    id: z.number(),
+    _id: z.number(),
     task: z.string(),
     checked: z.boolean(),
   })
 
-let todos = [
-    { id: 1, task: 'Spider-Man', checked: true },
-    { id: 2, task: 'Iron-Man', checked: true },
-    { id: 3, task: 'Dr. Strange', checked: false }
-  ];
+// let todos = [
+//     { id: 1, task: 'ReactJs', checked: true },
+//     { id: 2, task: 'Vite', checked: true },
+//     { id: 3, task: 'NodeJS', checked: false }
+//   ];
 
   //GET /todos
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+    const todos = await todosCollection.find().toArray()
     res.status(200).send(todos);
 });
 
 // GET /todos/:id
-router.get('/:id', (req, res) => {
-    const id = parseInt(req.params.id);
+router.get('/:id', async (req, res) => {
+    const todoID = parseInt(req.params.id);
 
-    const todo = todos.find(todo => todo.id === id);
+    if (!ObjectId.isValid(todoID)) return res.status(400).send('Invalid ID')
 
-    if (todo) {
-        res.status(200).send(todo);
-    } else {
-        res.status(404).send("Todo not found");
-    }
+    const foundTodoItem = await todosCollection.findOne({ _id: todoID })
+    if (foundTodoItem == null) return res.status(404).send('Not Found')
+
+    const todoItem = await todosCollection.findOne({ _id: todoID })
+  res.status(200).send(todoItem)
 });
 
 // POST /todos - { "task": "Make a wish" }
-router.post('/', (req, res) => {
-    const newTodoItem = { ...req.body, id: new Date().getTime() }
+router.post('/', async (req, res) => {
+  const newTodoItem = req.body;
 
-    const parsedResult = TodoSchema.safeParse(newTodoItem)
-  
-    if (!parsedResult.success) {
-      return res.status(400).send(parsedResult.error)
-    }
-  
-    todos = [...todos, parsedResult.data]
-    res.status(201).send(parsedResult.data)
+  const parsedResult = TodoSchema.safeParse(newTodoItem);
+
+  if (!parsedResult.success) {
+    return res.status(400).send(parsedResult.error);
+  }
+
+  const result = await todosCollection.insertOne(parsedResult.data);
+  const insertedId = result.insertedId; 
+
+  const todoItem = await todosCollection.findOne({ _id: insertedId }); 
+  res.status(201).send(todoItem);
 });
 
 // PATCH /todos/:id - { "checked": true }
-router.patch('/:id', (req, res) => {
-  const id = parseInt(req.params.id);
+router.patch('/:id', async (req, res) => {
+  const todoID = parseInt(req.params.id);
   const checked = req.body.checked;
 
-  const todoIndex = todos.findIndex(todo => todo.id === id);
+  if (!ObjectId.isValid(todoID)) return res.status(400).send('Invalid ID')
 
-  if (todoIndex !== -1) {
-      const updatedTodo = { ...todos[todoIndex], checked: checked };
-      const parsedResult = TodoSchema.safeParse(updatedTodo);
+  const foundTodoItem = await todosCollection.findOne({ _id: todoID })
+  if (foundTodoItem == null) return res.status(404).send('Not Found')
 
-      if (!parsedResult.success) {
-          return res.status(400).send(parsedResult.error);
-      }
-    }
+  const parsedResult = TodoSchema.safeParse({ ...foundTodoItem, checked })
+  if (!parsedResult.success) return res.status(400).send(parsedResult.error)
+
+  await todosCollection.updateOne({ _id: todoID }, { $set: { checked } })
+  const todoItem = await todosCollection.findOne({ _id: todoID })
+  res.status(200).send(todoItem)
 });
 
 // DELETE /todos/:id
-router.delete('/:id', (req, res) => {
-  const id = parseInt(req.params.id);
+router.delete('/:id', async (req, res) => {
+  const todoID = parseInt(req.params.id);
 
-  const todoIndex = todos.findIndex(todo => todo.id === id);
+  if (!ObjectId.isValid(todoID)) return res.status(400).send('Invalid ID')
 
-  if (todoIndex !== -1) {
-      const deletedTodo = todos.splice(todoIndex, 1);
-      res.status(200).send(deletedTodo);
-  } else {
-      res.status(404).send("Todo not found");
-  }
+  const foundTodoItem = await todosCollection.findOne({ _id: todoID })
+  if (foundTodoItem == null) return res.status(404).send('Not Found')
+
+  await todosCollection.deleteOne({ _id: todoID })
+  res.status(204).send()
 });
 
 export default router;
